@@ -24,6 +24,34 @@ pub struct Usage {
     pub used: i64,
 }
 #[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct TimeframeResponse {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub base: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub end_date: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<ApiFailure>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rates: Option<TimeframeResponseRates>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub start_date: Option<String>,
+    pub success: bool,
+}
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+pub struct TimeframeResponseRates {
+    /// Additional properties matching the spec's
+    /// `additionalProperties` value schema.
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, DailyRates>,
+}
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+pub struct DailyRates {
+    /// Additional properties matching the spec's
+    /// `additionalProperties` value schema.
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, f64>,
+}
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct SymbolsResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<ApiFailure>,
@@ -83,6 +111,34 @@ pub struct ErrorResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<ApiFailure>,
     pub success: bool,
+}
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ChangeResponse {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub base: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub end_date: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<ApiFailure>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rates: Option<ChangeResponseRates>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub start_date: Option<String>,
+    pub success: bool,
+}
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+pub struct ChangeResponseRates {
+    /// Additional properties matching the spec's
+    /// `additionalProperties` value schema.
+    #[serde(flatten)]
+    pub additional_properties: std::collections::BTreeMap<String, ChangeValues>,
+}
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ChangeValues {
+    pub change: f64,
+    pub change_pct: f64,
+    pub end_rate: f64,
+    pub start_rate: f64,
 }
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct ApiFailure {

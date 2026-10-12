@@ -2,17 +2,15 @@
 
 Unofficial async Rust client for [MetalpriceAPI](https://metalpriceapi.com/).
 
-A focused client for latest rates, dated rates, daily OHLC, supported symbols
-and account usage. It does not cover every provider endpoint. Requires Rust 1.85
-or newer and an API subscription with access to the requested endpoints.
+A focused client for latest rates, dated rates, date ranges, rate changes, daily
+OHLC, supported symbols and account usage. It does not cover every provider
+endpoint. Requires Rust 1.98.1 or newer and an API subscription with access to
+the requested endpoints.
 
 ```toml
 [dependencies]
-metalpriceapi = "0.1"
+metalpriceapi = "0.2"
 ```
-
-The crate is being prepared for publication; until published, use a local path
-dependency to this checkout.
 
 ```rust,no_run
 use metalpriceapi::{Client, NaiveDate};
@@ -37,6 +35,8 @@ println!("Gold close: {} USD", candle.rate.close);
 | --- | --- | --- |
 | `latest(base, symbols)` | `/latest` | `Rates` |
 | `historical(date, base, symbols)` | `/{date}` | `Rates` |
+| `timeframe(start, end, base, symbols)` | `/timeframe` | `Timeframe`, one `Rates`-style map per day |
+| `change(start, end, base, symbols)` | `/change` | `Change`, start, end and change per symbol |
 | `ohlc(base, currency, date)` | `/ohlc` | `Ohlc` |
 | `symbols()` | `/symbols` | Symbol names |
 | `usage()` | `/usage` | Plan and quota usage |

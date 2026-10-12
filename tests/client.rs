@@ -9,6 +9,8 @@ fn fixture(name: &str) -> Value {
     let source = match name {
         "latest" => include_str!("fixtures/latest.json"),
         "historical" => include_str!("fixtures/historical.json"),
+        "timeframe" => include_str!("fixtures/timeframe.json"),
+        "change" => include_str!("fixtures/change.json"),
         "ohlc" => include_str!("fixtures/ohlc.json"),
         "symbols" => include_str!("fixtures/symbols.json"),
         "usage" => include_str!("fixtures/usage.json"),
@@ -82,6 +84,87 @@ async fn historical_uses_calendar_date_and_explicit_unit() {
         rates.timestamp,
         fixture("historical")["timestamp"].as_i64().unwrap()
     );
+}
+
+#[tokio::test]
+async fn timeframe_returns_one_rate_map_per_day() {
+    let server = MockServer::start().await;
+    Mock::given(path("/v1/timeframe"))
+        .and(query_param("base", "USD"))
+        .and(query_param("currencies", "XAU,XCU,BRENT"))
+        .and(query_param("start_date", "2026-10-06"))
+        .and(query_param("end_date", "2026-10-08"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(fixture("timeframe")))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let start = NaiveDate::from_ymd_opt(2026, 10, 6).unwrap();
+    let end = NaiveDate::from_ymd_opt(2026, 10, 8).unwrap();
+    let frame = client(&server)
+        .timeframe(start, end, "USD", &["XAU", "XCU", "BRENT"])
+        .await
+        .unwrap();
+    assert_eq!((frame.start_date, frame.end_date), (start, end));
+    assert_eq!(frame.rates.len(), 3);
+    let day = NaiveDate::from_ymd_opt(2026, 10, 7).unwrap();
+    assert_eq!(frame.price_in_base(day, "XAU"), Some(4168.1550453641));
+    assert_eq!(frame.price_in_base(day, "XCU"), Some(0.4144442933));
+    assert_eq!(frame.rates[&day]["BRENT"], 0.0098937022);
+    assert_eq!(frame.price_in_base(day, "XAG"), None);
+    assert_eq!(
+        frame.price_in_base(NaiveDate::from_ymd_opt(2026, 10, 9).unwrap(), "XAU"),
+        None
+    );
+}
+
+#[tokio::test]
+async fn timeframe_rejects_bad_dates_and_failure_envelopes() {
+    let start = NaiveDate::from_ymd_opt(2026, 10, 6).unwrap();
+    let server = MockServer::start().await;
+    let mut body = fixture("timeframe");
+    body["rates"]["not-a-date"] = json!({"USDXAU": 1.0});
+    respond(&server, "/v1/timeframe", body).await;
+    assert!(matches!(
+        client(&server).timeframe(start, start, "USD", &[]).await,
+        Err(Error::Decode(_))
+    ));
+    let server = MockServer::start().await;
+    respond(&server, "/v1/timeframe", fixture("error")).await;
+    assert!(matches!(
+        client(&server).timeframe(start, start, "USD", &[]).await,
+        Err(Error::Provider {
+            code: Some(104),
+            ..
+        })
+    ));
+}
+
+#[tokio::test]
+async fn change_preserves_rate_direction_per_symbol() {
+    let server = MockServer::start().await;
+    Mock::given(path("/v1/change"))
+        .and(query_param("base", "USD"))
+        .and(query_param("currencies", "XAU,BRENT"))
+        .and(query_param("start_date", "2026-10-09"))
+        .and(query_param("end_date", "2026-10-10"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(fixture("change")))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let change = client(&server)
+        .change(
+            NaiveDate::from_ymd_opt(2026, 10, 9).unwrap(),
+            NaiveDate::from_ymd_opt(2026, 10, 10).unwrap(),
+            "USD",
+            &["XAU", "BRENT"],
+        )
+        .await
+        .unwrap();
+    assert_eq!(change.base, "USD");
+    assert_eq!(change.rates["XAU"].change_pct, -1.1416);
+    assert_eq!(change.rates["BRENT"].start_rate, 0.0096350556);
+    assert_eq!(change.rates["BRENT"].end_rate, 0.0095690944);
+    assert!(!change.rates.contains_key("XCU"));
 }
 
 #[tokio::test]

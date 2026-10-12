@@ -1,0 +1,20 @@
+{
+  "success": true,
+  "base": "USD",
+  "start_date": "2026-10-09",
+  "end_date": "2026-10-10",
+  "rates": {
+    "BRENT": {
+      "start_rate": 0.0096350556,
+      "end_rate": 0.0095690944,
+      "change": -0.0000659612,
+      "change_pct": -0.6846
+    },
+    "XAU": {
+      "start_rate": 0.0002411693,
+      "end_rate": 0.000238416,
+      "change": -0.0000027533,
+      "change_pct": -1.1416
+    }
+  }
+}

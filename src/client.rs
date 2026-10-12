@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use crate::generated::{
     client::HttpClient,
-    types::{ApiFailure, RatesResponse},
+    types::{ApiFailure, ChangeValues, RatesResponse},
 };
 use crate::{Error, NaiveDate, OhlcValues, Unit, Usage};
 
@@ -37,6 +37,37 @@ impl TryFrom<RatesResponse> for Rates {
             rates: required(response.rates, "rates")?.additional_properties,
         })
     }
+}
+
+/// Daily rates over a date range, exactly as returned, keyed by calendar date.
+/// Days the provider leaves out are absent, never filled in.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct Timeframe {
+    pub base: String,
+    pub start_date: NaiveDate,
+    pub end_date: NaiveDate,
+    pub rates: BTreeMap<NaiveDate, BTreeMap<String, f64>>,
+}
+
+impl Timeframe {
+    /// Provider-supplied reciprocal rate for one day: base currency per unit of
+    /// `symbol`, read from the `{base}{symbol}` entry. Absent stays absent.
+    pub fn price_in_base(&self, date: NaiveDate, symbol: &str) -> Option<f64> {
+        self.rates
+            .get(&date)?
+            .get(&format!("{}{symbol}", self.base))
+            .copied()
+    }
+}
+
+/// Start and end rates with the change per symbol, in the provider's rate
+/// direction (units of `symbol` per base) without inversion.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct Change {
+    pub base: String,
+    pub start_date: NaiveDate,
+    pub end_date: NaiveDate,
+    pub rates: BTreeMap<String, ChangeValues>,
 }
 
 /// OHLC in quote units per base unit, without inversion or unit conversion.
@@ -127,6 +158,65 @@ impl Client {
             .try_into()
     }
 
+    /// Daily rates for each calendar day from `start` to `end` inclusive. The
+    /// provider allows at most 365 days per request.
+    pub async fn timeframe(
+        &self,
+        start: NaiveDate,
+        end: NaiveDate,
+        base: &str,
+        symbols: &[&str],
+    ) -> Result<Timeframe, Error> {
+        let response = self
+            .inner
+            .get_timeframe(
+                Some(base),
+                symbol_list(symbols),
+                start.to_string(),
+                end.to_string(),
+                self.unit.clone(),
+            )
+            .await?;
+        check_success(response.success, response.error)?;
+        let mut rates = BTreeMap::new();
+        for (day, daily) in required(response.rates, "rates")?.additional_properties {
+            rates.insert(parse_date(&day)?, daily.additional_properties);
+        }
+        Ok(Timeframe {
+            base: required(response.base, "base")?,
+            start_date: parse_date(&required(response.start_date, "start_date")?)?,
+            end_date: parse_date(&required(response.end_date, "end_date")?)?,
+            rates,
+        })
+    }
+
+    /// Rate change per symbol between two calendar days.
+    pub async fn change(
+        &self,
+        start: NaiveDate,
+        end: NaiveDate,
+        base: &str,
+        symbols: &[&str],
+    ) -> Result<Change, Error> {
+        let response = self
+            .inner
+            .get_change(
+                Some(base),
+                symbol_list(symbols),
+                start.to_string(),
+                end.to_string(),
+                self.unit.clone(),
+            )
+            .await?;
+        check_success(response.success, response.error)?;
+        Ok(Change {
+            base: required(response.base, "base")?,
+            start_date: parse_date(&required(response.start_date, "start_date")?)?,
+            end_date: parse_date(&required(response.end_date, "end_date")?)?,
+            rates: required(response.rates, "rates")?.additional_properties,
+        })
+    }
+
     /// Daily OHLC in quote units per base unit. For USD per unit of gold, use
     /// base XAU and currency USD. The provider uses a GMT calendar day.
     pub async fn ohlc(&self, base: &str, currency: &str, date: NaiveDate) -> Result<Ohlc, Error> {
@@ -158,6 +248,11 @@ impl Client {
 
 fn symbol_list(symbols: &[&str]) -> Option<String> {
     (!symbols.is_empty()).then(|| symbols.join(","))
+}
+
+fn parse_date(text: &str) -> Result<NaiveDate, Error> {
+    text.parse()
+        .map_err(|_| Error::Decode(format!("Response date is not YYYY-MM-DD: {text}")))
 }
 
 fn required<T>(value: Option<T>, field: &str) -> Result<T, Error> {

@@ -1,4 +1,5 @@
-//! Typed async client for MetalpriceAPI's rates, OHLC, symbols and usage endpoints.
+//! Typed async client for MetalpriceAPI's rates, timeframe, change, OHLC, symbols
+//! and usage endpoints.
 //!
 //! ```no_run
 //! use metalpriceapi::Client;
@@ -23,6 +24,6 @@ pub mod generated {
 }
 
 pub use chrono::NaiveDate;
-pub use client::{Client, EU_BASE_URL, Ohlc, Rates, US_BASE_URL};
+pub use client::{Change, Client, EU_BASE_URL, Ohlc, Rates, Timeframe, US_BASE_URL};
 pub use error::Error;
-pub use generated::types::{OhlcValues, Unit, Usage};
+pub use generated::types::{ChangeValues, OhlcValues, Unit, Usage};

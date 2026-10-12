@@ -6,8 +6,10 @@
 reviewed on 2026-10-03. No official OpenAPI file was available from the locations
 checked. Do not describe this file as provider-supplied or as a complete API schema.
 
-It models latest, dated rates, OHLC, symbols and usage. Hourly/minutely rates,
-conversion, timeframe, change and carat endpoints are outside this initial scope.
+It models latest, dated rates, timeframe (a date range of up to 365 days),
+change, OHLC, symbols and usage. Hourly/minutely rates, conversion and carat
+endpoints are outside its scope. The timeframe and change shapes were checked
+against live responses on 2026-10-12.
 The specification and generated client are distributed under this project's
 MIT OR Apache-2.0 licence.
 

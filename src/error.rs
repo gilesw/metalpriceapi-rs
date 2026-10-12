@@ -55,10 +55,10 @@ impl<E: std::fmt::Debug> From<crate::generated::client::ApiOpError<E>> for Error
         match error {
             ApiOpError::Transport(error) => Self::Transport(error),
             ApiOpError::Api(error) => {
-                if (200..300).contains(&error.status) {
-                    if let Some(reason) = error.parse_error {
-                        return Self::Decode(reason);
-                    }
+                if (200..300).contains(&error.status)
+                    && let Some(reason) = error.parse_error
+                {
+                    return Self::Decode(reason);
                 }
                 Self::Api {
                     status: error.status,

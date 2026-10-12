@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "MetalpriceAPI maintained endpoint subset",
-    "version": "0.1.0",
-    "description": "Unofficial project-authored subset based on provider documentation reviewed 2026-10-03. Not an upstream OpenAPI document. Error aliases statusCode/message also appear in the existing consumer.",
+    "version": "0.2.0",
+    "description": "Unofficial project-authored subset based on provider documentation reviewed 2026-10-03, timeframe and change added 2026-10-12. Not an upstream OpenAPI document. Error aliases statusCode/message also appear in the existing consumer.",
     "license": {
       "name": "MIT OR Apache-2.0"
     }
@@ -463,6 +463,224 @@
           }
         }
       }
+    },
+    "/timeframe": {
+      "get": {
+        "operationId": "getTimeframe",
+        "parameters": [
+          {
+            "name": "base",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "currencies",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Unit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Provider envelope; inspect success even for HTTP 200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimeframeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Provider error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Provider error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Provider error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Provider error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Provider error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/change": {
+      "get": {
+        "operationId": "getChange",
+        "parameters": [
+          {
+            "name": "base",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "currencies",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/Unit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Provider envelope; inspect success even for HTTP 200",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Provider error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Provider error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Provider error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Provider error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Provider error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -648,6 +866,98 @@
           },
           "error": {
             "$ref": "#/components/schemas/ApiFailure"
+          }
+        },
+        "required": [
+          "success"
+        ]
+      },
+      "DailyRates": {
+        "type": "object",
+        "additionalProperties": {
+          "type": "number",
+          "format": "double"
+        }
+      },
+      "TimeframeResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "error": {
+            "$ref": "#/components/schemas/ApiFailure"
+          },
+          "base": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": "string"
+          },
+          "end_date": {
+            "type": "string"
+          },
+          "rates": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/DailyRates"
+            }
+          }
+        },
+        "required": [
+          "success"
+        ]
+      },
+      "ChangeValues": {
+        "type": "object",
+        "properties": {
+          "start_rate": {
+            "type": "number",
+            "format": "double"
+          },
+          "end_rate": {
+            "type": "number",
+            "format": "double"
+          },
+          "change": {
+            "type": "number",
+            "format": "double"
+          },
+          "change_pct": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "required": [
+          "start_rate",
+          "end_rate",
+          "change",
+          "change_pct"
+        ]
+      },
+      "ChangeResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "error": {
+            "$ref": "#/components/schemas/ApiFailure"
+          },
+          "base": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": "string"
+          },
+          "end_date": {
+            "type": "string"
+          },
+          "rates": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ChangeValues"
+            }
           }
         },
         "required": [

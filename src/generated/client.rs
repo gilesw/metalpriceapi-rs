@@ -296,6 +296,15 @@ fn __pct_encode_path_segment(s: &str) -> String {
     }
     out
 }
+///Typed error responses for `getChange`. One variant per declared non-2xx response.
+#[derive(Debug, Clone)]
+pub enum GetChangeApiError {
+    Status400(ErrorResponse),
+    Status401(ErrorResponse),
+    Status403(ErrorResponse),
+    Status429(ErrorResponse),
+    Status500(ErrorResponse),
+}
 ///Typed error responses for `getHistorical`. One variant per declared non-2xx response.
 #[derive(Debug, Clone)]
 pub enum GetHistoricalApiError {
@@ -332,6 +341,15 @@ pub enum GetSymbolsApiError {
     Status429(ErrorResponse),
     Status500(ErrorResponse),
 }
+///Typed error responses for `getTimeframe`. One variant per declared non-2xx response.
+#[derive(Debug, Clone)]
+pub enum GetTimeframeApiError {
+    Status400(ErrorResponse),
+    Status401(ErrorResponse),
+    Status403(ErrorResponse),
+    Status429(ErrorResponse),
+    Status500(ErrorResponse),
+}
 ///Typed error responses for `getUsage`. One variant per declared non-2xx response.
 #[derive(Debug, Clone)]
 pub enum GetUsageApiError {
@@ -342,6 +360,170 @@ pub enum GetUsageApiError {
     Status500(ErrorResponse),
 }
 impl HttpClient {
+    /// `GET /change`
+    pub async fn get_change(
+        &self,
+        base: Option<impl AsRef<str>>,
+        currencies: Option<impl AsRef<str>>,
+        start_date: impl AsRef<str>,
+        end_date: impl AsRef<str>,
+        unit: Option<Unit>,
+    ) -> Result<ChangeResponse, ApiOpError<GetChangeApiError>> {
+        let request_url = format!("{}{}", self.base_url, "/change");
+        let mut req = self.http_client.get(request_url);
+        {
+            let mut query_params: Vec<(String, String)> = Vec::new();
+            if let Some(v) = base {
+                query_params.push(("base".to_string(), v.as_ref().to_string()));
+            }
+            if let Some(v) = currencies {
+                query_params.push(("currencies".to_string(), v.as_ref().to_string()));
+            }
+            query_params
+                .push(("start_date".to_string(), start_date.as_ref().to_string()));
+            query_params.push(("end_date".to_string(), end_date.as_ref().to_string()));
+            if let Some(v) = unit {
+                query_params.push(("unit".to_string(), v.to_string()));
+            }
+            if !query_params.is_empty() {
+                req = req.query(&query_params);
+            }
+        }
+        if let Some(api_key) = &self.api_key {
+            req = req.header("X-API-KEY", api_key.as_str());
+        }
+        for (name, value) in &self.custom_headers {
+            if !name.eq_ignore_ascii_case("accept") {
+                req = req.header(name, value);
+            }
+        }
+        req = req.header(reqwest::header::ACCEPT, "application/json");
+        let response = req.send().await?;
+        let status = response.status();
+        let status_code = status.as_u16();
+        let headers = response.headers().clone();
+        let body_bytes = __read_bounded_response_body(
+                response,
+                self.max_response_body_bytes,
+            )
+            .await?;
+        let raw_body = body_bytes;
+        let body_text = String::from_utf8_lossy(&raw_body).into_owned();
+        if false || status_code == 200u16 {
+            match serde_json::from_str(&body_text) {
+                Ok(body) => Ok(body),
+                Err(e) => {
+                    Err(
+                        ApiOpError::Api(ApiError {
+                            status: status_code,
+                            headers: headers,
+                            body: body_text,
+                            raw_body,
+                            typed: None,
+                            parse_error: Some(
+                                format!("failed to deserialize 2xx response body: {}", e),
+                            ),
+                        }),
+                    )
+                }
+            }
+        } else if status.is_success() {
+            Err(
+                ApiOpError::Api(ApiError {
+                    status: status_code,
+                    headers,
+                    body: body_text,
+                    raw_body,
+                    typed: None,
+                    parse_error: Some(
+                        format!(
+                            "unexpected successful status {}; generated return type selects `{}`",
+                            status_code, "200",
+                        ),
+                    ),
+                }),
+            )
+        } else {
+            let typed: Option<GetChangeApiError>;
+            let parse_error: Option<String>;
+            match status_code {
+                400u16 => {
+                    match serde_json::from_str::<ErrorResponse>(&body_text) {
+                        Ok(v) => {
+                            typed = Some(GetChangeApiError::Status400(v));
+                            parse_error = None;
+                        }
+                        Err(e) => {
+                            typed = None;
+                            parse_error = Some(e.to_string());
+                        }
+                    }
+                }
+                401u16 => {
+                    match serde_json::from_str::<ErrorResponse>(&body_text) {
+                        Ok(v) => {
+                            typed = Some(GetChangeApiError::Status401(v));
+                            parse_error = None;
+                        }
+                        Err(e) => {
+                            typed = None;
+                            parse_error = Some(e.to_string());
+                        }
+                    }
+                }
+                403u16 => {
+                    match serde_json::from_str::<ErrorResponse>(&body_text) {
+                        Ok(v) => {
+                            typed = Some(GetChangeApiError::Status403(v));
+                            parse_error = None;
+                        }
+                        Err(e) => {
+                            typed = None;
+                            parse_error = Some(e.to_string());
+                        }
+                    }
+                }
+                429u16 => {
+                    match serde_json::from_str::<ErrorResponse>(&body_text) {
+                        Ok(v) => {
+                            typed = Some(GetChangeApiError::Status429(v));
+                            parse_error = None;
+                        }
+                        Err(e) => {
+                            typed = None;
+                            parse_error = Some(e.to_string());
+                        }
+                    }
+                }
+                500u16 => {
+                    match serde_json::from_str::<ErrorResponse>(&body_text) {
+                        Ok(v) => {
+                            typed = Some(GetChangeApiError::Status500(v));
+                            parse_error = None;
+                        }
+                        Err(e) => {
+                            typed = None;
+                            parse_error = Some(e.to_string());
+                        }
+                    }
+                }
+                _ => {
+                    typed = None;
+                    parse_error = None;
+                }
+            }
+            Err(
+                ApiOpError::Api(ApiError {
+                    status: status_code,
+                    headers,
+                    body: body_text,
+                    raw_body,
+                    typed,
+                    parse_error,
+                }),
+            )
+        }
+    }
     /// `GET /{date}`
     pub async fn get_historical(
         &self,
@@ -943,6 +1125,170 @@ impl HttpClient {
                     match serde_json::from_str::<ErrorResponse>(&body_text) {
                         Ok(v) => {
                             typed = Some(GetSymbolsApiError::Status500(v));
+                            parse_error = None;
+                        }
+                        Err(e) => {
+                            typed = None;
+                            parse_error = Some(e.to_string());
+                        }
+                    }
+                }
+                _ => {
+                    typed = None;
+                    parse_error = None;
+                }
+            }
+            Err(
+                ApiOpError::Api(ApiError {
+                    status: status_code,
+                    headers,
+                    body: body_text,
+                    raw_body,
+                    typed,
+                    parse_error,
+                }),
+            )
+        }
+    }
+    /// `GET /timeframe`
+    pub async fn get_timeframe(
+        &self,
+        base: Option<impl AsRef<str>>,
+        currencies: Option<impl AsRef<str>>,
+        start_date: impl AsRef<str>,
+        end_date: impl AsRef<str>,
+        unit: Option<Unit>,
+    ) -> Result<TimeframeResponse, ApiOpError<GetTimeframeApiError>> {
+        let request_url = format!("{}{}", self.base_url, "/timeframe");
+        let mut req = self.http_client.get(request_url);
+        {
+            let mut query_params: Vec<(String, String)> = Vec::new();
+            if let Some(v) = base {
+                query_params.push(("base".to_string(), v.as_ref().to_string()));
+            }
+            if let Some(v) = currencies {
+                query_params.push(("currencies".to_string(), v.as_ref().to_string()));
+            }
+            query_params
+                .push(("start_date".to_string(), start_date.as_ref().to_string()));
+            query_params.push(("end_date".to_string(), end_date.as_ref().to_string()));
+            if let Some(v) = unit {
+                query_params.push(("unit".to_string(), v.to_string()));
+            }
+            if !query_params.is_empty() {
+                req = req.query(&query_params);
+            }
+        }
+        if let Some(api_key) = &self.api_key {
+            req = req.header("X-API-KEY", api_key.as_str());
+        }
+        for (name, value) in &self.custom_headers {
+            if !name.eq_ignore_ascii_case("accept") {
+                req = req.header(name, value);
+            }
+        }
+        req = req.header(reqwest::header::ACCEPT, "application/json");
+        let response = req.send().await?;
+        let status = response.status();
+        let status_code = status.as_u16();
+        let headers = response.headers().clone();
+        let body_bytes = __read_bounded_response_body(
+                response,
+                self.max_response_body_bytes,
+            )
+            .await?;
+        let raw_body = body_bytes;
+        let body_text = String::from_utf8_lossy(&raw_body).into_owned();
+        if false || status_code == 200u16 {
+            match serde_json::from_str(&body_text) {
+                Ok(body) => Ok(body),
+                Err(e) => {
+                    Err(
+                        ApiOpError::Api(ApiError {
+                            status: status_code,
+                            headers: headers,
+                            body: body_text,
+                            raw_body,
+                            typed: None,
+                            parse_error: Some(
+                                format!("failed to deserialize 2xx response body: {}", e),
+                            ),
+                        }),
+                    )
+                }
+            }
+        } else if status.is_success() {
+            Err(
+                ApiOpError::Api(ApiError {
+                    status: status_code,
+                    headers,
+                    body: body_text,
+                    raw_body,
+                    typed: None,
+                    parse_error: Some(
+                        format!(
+                            "unexpected successful status {}; generated return type selects `{}`",
+                            status_code, "200",
+                        ),
+                    ),
+                }),
+            )
+        } else {
+            let typed: Option<GetTimeframeApiError>;
+            let parse_error: Option<String>;
+            match status_code {
+                400u16 => {
+                    match serde_json::from_str::<ErrorResponse>(&body_text) {
+                        Ok(v) => {
+                            typed = Some(GetTimeframeApiError::Status400(v));
+                            parse_error = None;
+                        }
+                        Err(e) => {
+                            typed = None;
+                            parse_error = Some(e.to_string());
+                        }
+                    }
+                }
+                401u16 => {
+                    match serde_json::from_str::<ErrorResponse>(&body_text) {
+                        Ok(v) => {
+                            typed = Some(GetTimeframeApiError::Status401(v));
+                            parse_error = None;
+                        }
+                        Err(e) => {
+                            typed = None;
+                            parse_error = Some(e.to_string());
+                        }
+                    }
+                }
+                403u16 => {
+                    match serde_json::from_str::<ErrorResponse>(&body_text) {
+                        Ok(v) => {
+                            typed = Some(GetTimeframeApiError::Status403(v));
+                            parse_error = None;
+                        }
+                        Err(e) => {
+                            typed = None;
+                            parse_error = Some(e.to_string());
+                        }
+                    }
+                }
+                429u16 => {
+                    match serde_json::from_str::<ErrorResponse>(&body_text) {
+                        Ok(v) => {
+                            typed = Some(GetTimeframeApiError::Status429(v));
+                            parse_error = None;
+                        }
+                        Err(e) => {
+                            typed = None;
+                            parse_error = Some(e.to_string());
+                        }
+                    }
+                }
+                500u16 => {
+                    match serde_json::from_str::<ErrorResponse>(&body_text) {
+                        Ok(v) => {
+                            typed = Some(GetTimeframeApiError::Status500(v));
                             parse_error = None;
                         }
                         Err(e) => {
